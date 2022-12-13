@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>D3 v4 - Music viz</title>
+    <style>
+      html,
+      body,
+      #svg {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        background-color: black;
+        user-select: none;
+        font-size: 14px;
+      }
+
+      body{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #svg {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        background-color: transparent;
+        cursor: pointer;
+        z-index: 1;
+      }
+
+      .invitation {
+        font-family: "inter", sans-serif;
+        position: absolute;
+        bottom: 100px;
+        width: 100vw;
+        margin: auto;
+        text-align: center;
+        color: #2c7bb6;
+        user-select: none;
+        cursor: default;
+        z-index: 10;
+      }
+
+      .barNum{
+        color: white;
+      }
+
+      .tile{
+        height: 70%;
+        width: 70%;
+        border: 1px solid white;
+      }
+
+      .yAxis path {
+        stroke: white;
+      }
+      
+      @media screen and (min-width: 300px) {
+        .invitation {
+          font-size: 28px;
+        }
+      }
+      
+      @media screen and (min-width: 401px) {
+        .invitation {
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <audio crossOrigin="anonymous" id="audioElement" src="./music4.mp3"></audio>
+    <script src="https:///d3js.org/d3.v4.min.js"></script>
+    <div class="invitation"></div>
+    <script>
+      var playing = false;
+
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+
+      // Invite to play
+      d3.select("body")
+        .append("div")
+        .attr("class", "invitation")
+        .attr("width", 300)
+        .attr("height", 20)
+        .text("TAP TO PLAY");
+
+      var svg = d3
+        .select("body")
+        .append("svg")
+        .attr("width", w)
+        .attr("height", h)
+        .attr("preserveAspectRatio", "xMidYMid meet")
+        .attr("viewBox", "0 0 " + w + " " + h);
+
+        var scale = d3.scaleSqrt()
+        .domain([-70, 0])
+        .range([300, 0]);
+
+        var tickScale = d3.scaleLinear()
+        .domain([-70, 0])
+        .range([300, 0]);
+
+        var y_axis = d3.axisLeft(scale)
+        .ticks(7)
+        .tickSize(0);
+
+        var y_bars = d3.axisLeft(tickScale)
+        .ticks(20)
+        .tickSize(1)
+        .tickFormat("_")
+        .tickSizeOuter(0);
+
+        svg.append("g")
+       .attr("transform", "translate(40, 100)")
+       .call(y_axis)
+       .attr("stroke", "white")
+       .attr('stroke-width', '0.5px')
+       .select(".domain").remove();
+
+      var barCount = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+
+      svg.selectAll('rect')
+      .data(barCount)
+      .enter()
+      .append('rect')
+      .attr('class', 'bar')
+      .attr('x', function(d) {return d * 70})
+      .attr('y', 100)
+      .attr('width', 35)
+      .attr('height', 300)
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      
+
+      svg.selectAll('.y_bar')
+      .data(barCount)
+      .enter()
+      .append("g")
+      .attr("class", "y_bar")
+      .attr("transform", function(d) { return "translate(" + (d*70 + 25) + ", 100)"})
+      .call(y_bars)
+      .attr("stroke", "white")
+      .attr('stroke-width', '0.5px');
+
+      svg.selectAll('.barNum')
+      .data(barCount)
+      .enter()
+      .append("text")
+      .attr("class", "barNum")
+      .text(function(d) {return d})
+      .attr('x', function(d) {return d * 70 + 17})
+      .attr('y', 430)
+      .attr("stroke", "white")
+      .attr('stroke-width', '0.5px');
+
+      var count = 0;
+
+      function togglePlay() {
+        if (playing === false) {
+          // Hide invitation
+          d3.selectAll(".invitation").text("");
+
+          var audioCtx = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          var audioElement = document.getElementById("audioElement");
+            
+          var audioSrc = audioCtx.createMediaElementSource(audioElement);
+          var analyser = audioCtx.createAnalyser();
+
+          // bind analyser to the media element source.
+          audioSrc.connect(analyser);
+          audioSrc.connect(audioCtx.destination);
+          audioSrc.crossOrigin = "anonymous";
+
+          var bufferSize = analyser.frequencyBinCount;
+          //console.log(bufferSize);
+
+          //var frequencyData = new Uint8Array(200);
+          var frequencyData = new Uint8Array(bufferSize);
+          frequencyData = frequencyData.slice(0, 16)
+          analyser.getByteFrequencyData(frequencyData);
+
+          var colorScale = d3
+            .scaleLinear()
+            .domain([0, 200])
+            .range(["#08b3e5", "#22e4ac"]);
+
+          var barScale = d3
+          .scaleLinear()
+          .domain([1,10])
+          .range([1,10])
+
+          var greenBars = svg
+            .selectAll(".green")
+            .data(frequencyData)
+            .enter()
+            .append("g")
+            .append("rect")
+            .attr('class', 'green')
+            .attr("x", function (d, i) {
+              return (barScale(i) + 1)*70;
+            })
+            .attr("y", function (d) {
+              return h - 200;
+            })
+            .attr("width", function (d) {
+              return 35;
+            })
+            .attr("height", function (d) {
+              return  d;
+            })
+            .attr("fill", function (d, i) {
+              return colorScale(d);
+            });
+
+            var yellowBars = svg
+            .selectAll(".yellow")
+            .data(frequencyData)
+            .enter()
+            .append("g")
+            .append("rect")
+            .attr('class', 'yellow')
+            .attr("x", function (d, i) {
+              return (barScale(i) + 1)*70;
+            })
+            .attr("y", function (d) {
+              return h - 200;
+            })
+            .attr("width", function (d) {
+              return 35;
+            })
+            .attr("height", function (d) {
+              return  d;
+            })
+            .attr("fill", function (d, i) {
+              return colorScale(d);
+            });
+
+            var redBars = svg
+            .selectAll(".red")
+            .data(frequencyData)
+            .enter()
+            .append("g")
+            .append("rect")
+            .attr('class', 'red')
+            .attr("x", function (d, i) {
+              return (barScale(i) + 1)*70;
+            })
+            .attr("y", function (d) {
+              return h - 200;
+            })
+            .attr("width", function (d) {
+              return 35;
+            })
+            .attr("height", function (d) {
+              return  d;
+            })
+            .attr("fill", function (d, i) {
+              return colorScale(d);
+            });
+
+          audioElement.play();
+          drawChart();
+        
+          playing = true;
+        } else {
+          var audioElement = document.getElementById("audioElement");
+
+          audioElement.pause();
+          playing = false;
+        }
+
+        function drawChart() {
+          requestAnimationFrame(drawChart);
+          analyser.getByteFrequencyData(frequencyData);
+
+          //console.log("data", frequencyData);
+
+          svg.selectAll(".green")
+          .data(frequencyData)
+          .attr("y", function (d) {
+            return d >= 128 ? (h - 128 - 200) : (h - d - 200);
+          })
+          .attr("height", function (d) {
+            return d >= 128 ? 128 : d;
+          })
+          .attr("fill", "#1ced54")
+          .attr("opacity", 0.6);
+
+          svg.selectAll(".yellow")
+          .data(frequencyData)
+          .attr("y", function (d) {
+            if( d <= 128){
+              return 0;
+            }
+            return d >= 190 ? (h - 190 - 200) : (h - d - 200);
+          })
+          .attr("height", function (d) {
+            if( d <= 128){
+              return 0;
+            }
+            return d >= 190 ? 190 - 128 : d - 128;
+          })
+          .attr("fill", "#ebe713")
+          .attr("opacity", 0.6);
+
+          svg.selectAll(".red")
+          .data(frequencyData)
+          .attr("y", function (d) {
+            if(d <= 190){
+              return 0;
+            }
+            return (h - d - 200);
+          })
+          .attr("height", function (d) {
+            if(d <= 190){
+              return 0;
+            }
+            return d - 190;
+          })
+          .attr("fill", "#eb1613")
+          .attr("opacity", 0.6);
+        }
+      }
+
+      togglePlay;
+      svg.on("click", togglePlay);
+    </script>
+  </body>
+</html>
