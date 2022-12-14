@@ -84,6 +84,11 @@
       var w = window.innerWidth;
       var h = window.innerHeight;
 
+      var barHeight = 300;
+      var topOffset = 100;
+
+      var totalBars = 16
+
       // Invite to play
       d3.select("body")
         .append("div")
@@ -102,11 +107,11 @@
 
         var scale = d3.scaleSqrt()
         .domain([-70, 0])
-        .range([300, 0]);
+        .range([barHeight, 0]);
 
         var tickScale = d3.scaleLinear()
         .domain([-70, 0])
-        .range([300, 0]);
+        .range([barHeight, 0]);
 
         var y_axis = d3.axisLeft(scale)
         .ticks(7)
@@ -133,9 +138,9 @@
       .append('rect')
       .attr('class', 'bar')
       .attr('x', function(d) {return d * 70})
-      .attr('y', 100)
+      .attr('y', topOffset)
       .attr('width', 35)
-      .attr('height', 300)
+      .attr('height', barHeight)
       .attr('fill', 'none')
       .attr('stroke', 'white')
       
@@ -157,46 +162,41 @@
       .attr("class", "barNum")
       .text(function(d) {return d})
       .attr('x', function(d) {return d * 70 + 17})
-      .attr('y', 430)
+      .attr('y', barHeight + topOffset + 30)
       .attr("stroke", "white")
       .attr('stroke-width', '0.5px');
 
       var count = 0;
+
+      var audioCtx = new (window.AudioContext ||
+      window.webkitAudioContext)();
+      var audioElement = document.getElementById("audioElement");
+        
+      var audioSrc = audioCtx.createMediaElementSource(audioElement);
+      var analyser = audioCtx.createAnalyser();
+
+      // bind analyser to the media element source.
+      audioSrc.connect(analyser);
+      audioSrc.connect(audioCtx.destination);
+      audioSrc.crossOrigin = "anonymous";
+
+      var bufferSize = analyser.frequencyBinCount;
+      //console.log(bufferSize);
+
+      //var frequencyData = new Uint8Array(200);
+      var frequencyData = new Uint8Array(bufferSize);
+      frequencyData = frequencyData.slice(0, totalBars)
+      analyser.getByteFrequencyData(frequencyData);
 
       function togglePlay() {
         if (playing === false) {
           // Hide invitation
           d3.selectAll(".invitation").text("");
 
-          var audioCtx = new (window.AudioContext ||
-            window.webkitAudioContext)();
-          var audioElement = document.getElementById("audioElement");
-            
-          var audioSrc = audioCtx.createMediaElementSource(audioElement);
-          var analyser = audioCtx.createAnalyser();
-
-          // bind analyser to the media element source.
-          audioSrc.connect(analyser);
-          audioSrc.connect(audioCtx.destination);
-          audioSrc.crossOrigin = "anonymous";
-
-          var bufferSize = analyser.frequencyBinCount;
-          //console.log(bufferSize);
-
-          //var frequencyData = new Uint8Array(200);
-          var frequencyData = new Uint8Array(bufferSize);
-          frequencyData = frequencyData.slice(0, 16)
-          analyser.getByteFrequencyData(frequencyData);
-
-          var colorScale = d3
-            .scaleLinear()
-            .domain([0, 200])
-            .range(["#08b3e5", "#22e4ac"]);
-
           var barScale = d3
           .scaleLinear()
-          .domain([1,10])
-          .range([1,10])
+          .domain([1, totalBars])
+          .range([1,totalBars])
 
           var greenBars = svg
             .selectAll(".green")
@@ -216,9 +216,6 @@
             })
             .attr("height", function (d) {
               return  d;
-            })
-            .attr("fill", function (d, i) {
-              return colorScale(d);
             });
 
             var yellowBars = svg
@@ -239,9 +236,6 @@
             })
             .attr("height", function (d) {
               return  d;
-            })
-            .attr("fill", function (d, i) {
-              return colorScale(d);
             });
 
             var redBars = svg
@@ -262,10 +256,9 @@
             })
             .attr("height", function (d) {
               return  d;
-            })
-            .attr("fill", function (d, i) {
-              return colorScale(d);
             });
+
+          var audioElement = document.getElementById("audioElement");
 
           audioElement.play();
           drawChart();
@@ -287,7 +280,7 @@
           svg.selectAll(".green")
           .data(frequencyData)
           .attr("y", function (d) {
-            return d >= 128 ? (h - 128 - 200) : (h - d - 200);
+            return d >= 128 ? (barHeight + topOffset - 128) : (barHeight + topOffset - d);
           })
           .attr("height", function (d) {
             return d >= 128 ? 128 : d;
@@ -301,7 +294,7 @@
             if( d <= 128){
               return 0;
             }
-            return d >= 190 ? (h - 190 - 200) : (h - d - 200);
+            return d >= 190 ? (barHeight + topOffset - 190) : (barHeight + topOffset - d);
           })
           .attr("height", function (d) {
             if( d <= 128){
@@ -318,7 +311,7 @@
             if(d <= 190){
               return 0;
             }
-            return (h - d - 200);
+            return (barHeight + topOffset - d);
           })
           .attr("height", function (d) {
             if(d <= 190){
