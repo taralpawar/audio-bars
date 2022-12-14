@@ -168,30 +168,30 @@
 
       var count = 0;
 
-      var audioCtx = new (window.AudioContext ||
-      window.webkitAudioContext)();
-      var audioElement = document.getElementById("audioElement");
-      audioCtx.resume();
-      var audioSrc = audioCtx.createMediaElementSource(audioElement);
-      var analyser = audioCtx.createAnalyser();
-
-      // bind analyser to the media element source.
-      audioSrc.connect(analyser);
-      audioSrc.connect(audioCtx.destination);
-      audioSrc.crossOrigin = "anonymous";
-
-      var bufferSize = analyser.frequencyBinCount;
-      //console.log(bufferSize);
-
-      //var frequencyData = new Uint8Array(200);
-      var frequencyData = new Uint8Array(bufferSize);
-      frequencyData = frequencyData.slice(0, totalBars)
-      analyser.getByteFrequencyData(frequencyData);
-
       function togglePlay() {
         if (playing === false) {
           // Hide invitation
           d3.selectAll(".invitation").text("");
+          
+          var audioCtx = new (window.AudioContext ||
+          window.webkitAudioContext)();
+          var audioElement = document.getElementById("audioElement");
+          audioCtx.resume();
+          var audioSrc = audioCtx.createMediaElementSource(audioElement);
+          var analyser = audioCtx.createAnalyser();
+
+          // bind analyser to the media element source.
+          audioSrc.connect(analyser);
+          audioSrc.connect(audioCtx.destination);
+          audioSrc.crossOrigin = "anonymous";
+
+          var bufferSize = analyser.frequencyBinCount;
+          //console.log(bufferSize);
+
+          //var frequencyData = new Uint8Array(200);
+          var frequencyData = new Uint8Array(bufferSize);
+          frequencyData = frequencyData.slice(0, totalBars)
+          analyser.getByteFrequencyData(frequencyData);
 
           var barScale = d3
           .scaleLinear()
